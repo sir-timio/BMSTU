@@ -17,8 +17,9 @@ class Rule(var tag: RuleTag,
     override fun toString(): String {
         val (start, end) = when (tag) {
             RuleTag.Normal      -> "<" to ">"
-            RuleTag.Token       -> "<"  to ">"
-            RuleTag.TokenStar   -> "{<"  to ">}"
+            RuleTag.Token       -> ""  to ""
+            RuleTag.TokenStar   -> "{"  to "}"
+            RuleTag.NormalStar  -> "{<"  to ">}"
             else                -> "ERROR"  to "ERROR"
         }
 
@@ -29,7 +30,7 @@ class Rule(var tag: RuleTag,
         }
         alternatives.forEach {
             it.forEach {
-                result = result.plus(it.toString() + " ")
+                result = result.plus(it.toString() + "|")
             }
         }
 //        println(elems)

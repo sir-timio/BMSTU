@@ -12,6 +12,7 @@ fun main() {
     val parser = Parser(tokens)
     parser.parse()
 
+
     val first = First(parser.mapRule)
     first.printFirst()
 }
