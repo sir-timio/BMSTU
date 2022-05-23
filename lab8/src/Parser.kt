@@ -7,9 +7,10 @@ class Parser(private val tokens: List<Token>) {
     var mapRule = HashMap<String, Rule>()
     private var curState = ""
     private var states = mutableListOf<String>()
+    private var curStar = false
 
     fun parse() {
-        parseExprs()
+        parseS()
 //        mapRule.forEach { key, value -> println("<$key $value>") }
         if (!ntermsLeft.containsAll(ntermsRight)) {
             println("Undefined NTERMs:")
@@ -17,55 +18,129 @@ class Parser(private val tokens: List<Token>) {
             exit()
         }
     }
-    //    S ::= R S | .
+
+    //    S ::= R {R}
     //    R ::= <OPEN> <NTERM> A <CLOSE>
     //    A ::= <OPEN> E <CLOSE> A | .
     //    E ::= <NTERM> E | <TERM> E | <OPEN> I <CLOSE> E | <IOPEN> E <ICLOSE> E | .
     //    I ::= <OPEN> E <CLOSE> I | .
 
-    /*
-        Exprs = Expr { Expr }
-        Expr = <OPEN> NonTerm Alt <CLOSE>
-        Alt = "(" Rp { Rp } { "," Rp { Rp } } ")"
-        Rp = NonTerm | Term | "{" Rp { Rp } "}" | Alt
-     */
+    //    S -> R S | .
+    private fun parseS() {
+        states.add("S")
 
-    private fun parseExprs() {
-        parseExpr()
         while (curToken.tag == DomainTag.OPEN) {
-            parseExpr()
+            parseR()
         }
-        if (curToken.tag != DomainTag.EOP)
-            exit()
+        if (curToken.tag != DomainTag.EOP) exit()
     }
 
-//    Expr = <OPEN> NTerm Alt <CLOSE>
-    private fun parseExpr() {
-        if (curToken.tag == DomainTag.OPEN) {
+    //    R -> <OPEN> <NTERM> A {A} <CLOSE>
+    private fun parseR() {
+        states.add("R")
+
+        if (curToken.tag != DomainTag.OPEN) exit()
+        nextToken()
+
+        if (curToken.tag != DomainTag.NTERM) exit()
+        val left = curToken
+        val rule = Rule(RuleTag.Token, null)
+        ntermsLeft.add(left.value)
+        nextToken()
+        parseA(rule)
+        while (curToken.tag == DomainTag.OPEN) {
+            rule.addAlternatives()
+            parseA(rule)
+        }
+        mapRule[left.value] = rule
+        if (curToken.tag != DomainTag.CLOSE) exit()
+        nextToken()
+    }
+
+    //    A -> <OPEN> E <CLOSE> {<OPEN> E <CLOSE>} | .
+    private fun parseA(rule: Rule) {
+        curState = "A"
+        states.add(curState)
+
+        if (curToken.tag != DomainTag.OPEN) exit()
+        nextToken()
+
+        val newRule = Rule(RuleTag.Normal, null)
+        newRule.addAlternatives()
+        parseE(newRule, false)
+
+        if (curToken.tag != DomainTag.CLOSE) exit()
+        nextToken()
+        rule.addAlternatives()
+        rule.addRule(newRule)
+
+        while (curToken.tag == DomainTag.OPEN) {
             nextToken()
-            if (curToken.tag != DomainTag.NTERM)
-                exit()
-            val nterm = curToken.value
-            val rule = Rule(RuleTag.Normal, null)
-            ntermsLeft.add(nterm)
+            val newRule = Rule(RuleTag.Normal, null)
+            newRule.addAlternatives()
+            parseE(newRule, false)
+            if (curToken.tag != DomainTag.CLOSE) exit()
             nextToken()
-            parseAlt(rule)
+            rule.addAlternatives()
+            rule.addRule(newRule)
+        }
+//        rule.addRule(newRule)
+    }
+
+    //    E -> <NTERM> {E} | <TERM> {E}| <OPEN> I <CLOSE> {E} | <IOPEN> E <ICLOSE> {E} | .
+    private fun parseE(rule: Rule, star: Boolean) {
+        curState = "E"
+        states.add(curState)
+
+        when (curToken.tag) {
+            DomainTag.NTERM, DomainTag.TERM -> {
+                val token = curToken
+                if (curToken.tag == DomainTag.NTERM) {
+                    ntermsRight.add(token.value)
+                }
+                rule.addRule(Rule(if (star) RuleTag.TokenStar else RuleTag.Token, token))
+                nextToken()
+                parseE(rule, star)
+            }
+            DomainTag.OPEN -> {
+                nextToken()
+                parseI(rule, star)
+                if (curToken.tag != DomainTag.CLOSE) exit()
+                nextToken()
+                parseE(rule, star)
+            }
+            DomainTag.IOPEN -> {
+                nextToken()
+                parseE(rule, true)
+                if (curToken.tag != DomainTag.ICLOSE) exit()
+                nextToken()
+                parseE(rule, star)
+            }
+            DomainTag.EOP -> return
         }
     }
 
-//    Alt = <OPEN> Rp { Rp } { Rp { Rp } } <CLOSE>
-    private fun parseAlt(rule: Rule) {
-        if (curToken.tag == DomainTag.OPEN) {
-            val subRule = Rule(RuleTag.Normal, null)
-            nextToken()
-            parseRp(subRule)
+    //    I -> <OPEN> E <CLOSE> I | .
+    private fun parseI(rule: Rule, star: Boolean) {
+        curStar = star
+        curState = "I"
+        states.add(curState)
+
+        when (curToken.tag) {
+            DomainTag.EOP -> return
+            DomainTag.OPEN -> {
+                nextToken()
+                parseE(rule, star)
+                if (curToken.tag != DomainTag.CLOSE) exit()
+                nextToken()
+                parseI(rule, star)
+            }
+            DomainTag.TERM, DomainTag.NTERM -> {
+                nextToken()
+                parseE(rule, star)
+            }
         }
     }
-
-    private fun parseRp(rule: Rule) {
-
-    }
-
 
 
     private fun nextToken() {
@@ -73,7 +148,6 @@ class Parser(private val tokens: List<Token>) {
         curToken = tokens[index + 1]
 //        print("curToken: $curToken on state $curState\n")
     }
-
 
 
     private fun printNextTokens() {

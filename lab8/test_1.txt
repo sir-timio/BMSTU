@@ -9,11 +9,3 @@
 <F <n>
     <- F>
     <( E ) > >
-
-
-
-S ::= R S | .
-R ::= <OPEN> <NTERM> A <CLOSE>
-A ::= <OPEN> A' <CLOSE> A | .
-A' ::= <NTERM> A' | <TERM> A' | <OPEN> I <CLOSE> A' | <IOPEN> A' <ICLOSE> A' | .
-I ::= <OPEN> A' <CLOSE> I | .

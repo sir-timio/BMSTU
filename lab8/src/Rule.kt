@@ -11,14 +11,13 @@ class Rule(var tag: RuleTag,
     fun addAlternatives() {
         elems = ArrayList<Rule>()
         alternatives.add(elems)
-
     }
 
     override fun toString(): String {
         val (start, end) = when (tag) {
             RuleTag.Normal      -> "<" to ">"
             RuleTag.Token       -> ""  to ""
-            RuleTag.TokenStar   -> "{"  to "}"
+            RuleTag.TokenStar   -> ""  to ""
             RuleTag.NormalStar  -> "{<"  to ">}"
             else                -> "ERROR"  to "ERROR"
         }
@@ -30,7 +29,7 @@ class Rule(var tag: RuleTag,
         }
         alternatives.forEach {
             it.forEach {
-                result = result.plus(it.toString() + "|")
+                result = result.plus(it.toString() + " ")
             }
         }
 //        println(elems)

@@ -1,5 +1,0 @@
-class
-super
-clasuper
-"a\"defqwe"
-123
