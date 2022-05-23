@@ -11,21 +11,20 @@ class Parser(private val tokens: List<Token>) {
 
     fun parse() {
         parseS()
-//        mapRule.forEach { key, value -> println("<$key $value>") }
+        mapRule.forEach { key, value -> println("<$key $value>") }
         if (!ntermsLeft.containsAll(ntermsRight)) {
             println("Undefined NTERMs:")
             println(ntermsRight - ntermsLeft)
             exit()
         }
     }
+    //    R -> <OPEN> <NTERM> A {A} <CLOSE>
+    //    A -> <OPEN> E <CLOSE> {<OPEN> E <CLOSE>} | .
+    //    E -> <NTERM> {E} | <TERM> {E}| <OPEN> I <CLOSE> {E} | <IOPEN> E <ICLOSE> {E} | .
+    //    I -> <OPEN> E <CLOSE> {I} | .
 
-    //    S ::= R {R}
-    //    R ::= <OPEN> <NTERM> A <CLOSE>
-    //    A ::= <OPEN> E <CLOSE> A | .
-    //    E ::= <NTERM> E | <TERM> E | <OPEN> I <CLOSE> E | <IOPEN> E <ICLOSE> E | .
-    //    I ::= <OPEN> E <CLOSE> I | .
 
-    //    S -> R S | .
+
     private fun parseS() {
         states.add("S")
 
@@ -67,6 +66,9 @@ class Parser(private val tokens: List<Token>) {
 
         val newRule = Rule(RuleTag.Normal, null)
         newRule.addAlternatives()
+        if (curToken.tag == DomainTag.IOPEN){
+            newRule.tag = RuleTag.NormalStar
+        }
         parseE(newRule, false)
 
         if (curToken.tag != DomainTag.CLOSE) exit()
@@ -77,6 +79,9 @@ class Parser(private val tokens: List<Token>) {
         while (curToken.tag == DomainTag.OPEN) {
             nextToken()
             val newRule = Rule(RuleTag.Normal, null)
+            if (curToken.tag == DomainTag.IOPEN){
+                newRule.tag = RuleTag.NormalStar
+            }
             newRule.addAlternatives()
             parseE(newRule, false)
             if (curToken.tag != DomainTag.CLOSE) exit()
@@ -84,7 +89,6 @@ class Parser(private val tokens: List<Token>) {
             rule.addAlternatives()
             rule.addRule(newRule)
         }
-//        rule.addRule(newRule)
     }
 
     //    E -> <NTERM> {E} | <TERM> {E}| <OPEN> I <CLOSE> {E} | <IOPEN> E <ICLOSE> {E} | .
@@ -98,29 +102,30 @@ class Parser(private val tokens: List<Token>) {
                 if (curToken.tag == DomainTag.NTERM) {
                     ntermsRight.add(token.value)
                 }
-                rule.addRule(Rule(if (star) RuleTag.TokenStar else RuleTag.Token, token))
+//                rule.addRule(Rule(if (star) RuleTag.TokenStar else RuleTag.Token, token))
+                rule.addRule(Rule(RuleTag.Token, token))
                 nextToken()
-                parseE(rule, star)
+                parseE(rule, false)
             }
             DomainTag.OPEN -> {
                 nextToken()
                 parseI(rule, star)
                 if (curToken.tag != DomainTag.CLOSE) exit()
                 nextToken()
-                parseE(rule, star)
+                parseE(rule, false)
             }
             DomainTag.IOPEN -> {
                 nextToken()
                 parseE(rule, true)
                 if (curToken.tag != DomainTag.ICLOSE) exit()
                 nextToken()
-                parseE(rule, star)
+                parseE(rule, false)
             }
             DomainTag.EOP -> return
         }
     }
 
-    //    I -> <OPEN> E <CLOSE> I | .
+    //    I -> <OPEN> E <CLOSE> {I} | .
     private fun parseI(rule: Rule, star: Boolean) {
         curStar = star
         curState = "I"

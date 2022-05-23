@@ -3,8 +3,4 @@ enum class RuleTag {
     TokenStar,
     Normal,
     NormalStar,
-    Nterm,
-    Term,
-    Empty,
-    Error
 }

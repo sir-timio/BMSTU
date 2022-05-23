@@ -18,7 +18,7 @@ class Rule(var tag: RuleTag,
             RuleTag.Normal      -> "<" to ">"
             RuleTag.Token       -> ""  to ""
             RuleTag.TokenStar   -> ""  to ""
-            RuleTag.NormalStar  -> "{<"  to ">}"
+            RuleTag.NormalStar  -> "{"  to "}"
             else                -> "ERROR"  to "ERROR"
         }
 
@@ -31,9 +31,10 @@ class Rule(var tag: RuleTag,
             it.forEach {
                 result = result.plus(it.toString() + " ")
             }
+
         }
 //        println(elems)
-        return result + end
+        return result.removeSuffix(" ") + end
     }
 
 }
