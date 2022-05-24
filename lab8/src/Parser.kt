@@ -11,7 +11,7 @@ class Parser(private val tokens: List<Token>) {
 
     fun parse() {
         parseS()
-        mapRule.forEach { key, value -> println("<$key $value>") }
+//        mapRule.forEach { key, value -> println("<$key $value>") }
         if (!ntermsLeft.containsAll(ntermsRight)) {
             println("Undefined NTERMs:")
             println(ntermsRight - ntermsLeft)
@@ -91,7 +91,7 @@ class Parser(private val tokens: List<Token>) {
         }
     }
 
-    //    E -> <NTERM> {E} | <TERM> {E}| <OPEN> I <CLOSE> {E} | <IOPEN> E <ICLOSE> {E} | .
+    //    E -> <NTERM> E | <TERM> E | <OPEN> I <CLOSE> E | <IOPEN> E <ICLOSE> E | .
     private fun parseE(rule: Rule, star: Boolean) {
         curState = "E"
         states.add(curState)
@@ -102,7 +102,6 @@ class Parser(private val tokens: List<Token>) {
                 if (curToken.tag == DomainTag.NTERM) {
                     ntermsRight.add(token.value)
                 }
-//                rule.addRule(Rule(if (star) RuleTag.TokenStar else RuleTag.Token, token))
                 rule.addRule(Rule(RuleTag.Token, token))
                 nextToken()
                 parseE(rule, false)
@@ -116,16 +115,19 @@ class Parser(private val tokens: List<Token>) {
             }
             DomainTag.IOPEN -> {
                 nextToken()
-                parseE(rule, true)
+                val iRule = Rule(RuleTag.NormalStar, null)
+                iRule.addAlternatives()
+                parseE(iRule, true)
                 if (curToken.tag != DomainTag.ICLOSE) exit()
                 nextToken()
+                rule.addRule(iRule)
                 parseE(rule, false)
             }
             DomainTag.EOP -> return
         }
     }
 
-    //    I -> <OPEN> E <CLOSE> {I} | .
+    //    I -> <OPEN> E <CLOSE> I | .
     private fun parseI(rule: Rule, star: Boolean) {
         curStar = star
         curState = "I"
@@ -135,6 +137,7 @@ class Parser(private val tokens: List<Token>) {
             DomainTag.EOP -> return
             DomainTag.OPEN -> {
                 nextToken()
+                rule.addAlternatives()
                 parseE(rule, star)
                 if (curToken.tag != DomainTag.CLOSE) exit()
                 nextToken()
