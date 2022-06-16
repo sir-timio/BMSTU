@@ -1,5 +1,7 @@
-program Hello;
+program hello(output);
 
 begin
-  WriteLn('Hello, student!');
+   writeln(10);
+   writeln(1_0);
+   writeln(_10);
 end.
