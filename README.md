@@ -1,1 +1,1 @@
-# comp-labs
+# bmstu labs
